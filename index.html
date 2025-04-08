@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smitty翻译</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+        }
+        
+        :root {
+            --primary-color: #7c66ff;
+            --primary-hover: #6a56ee;
+            --bg-color: #f7f9fc;
+            --header-height: 60px;
+            --border-radius: 12px;
+            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: #2c3e50;
+        }
+        
+        .app-container {
+            display: flex;
+            height: 100vh;
+            position: relative;
+        }
+        
+        /* 主内容区域样式 */
+        
+        /* 主内容区域 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-color);
+            min-width: 0;
+        }
+        
+        /* 顶部导航 */
+        .nav-tabs {
+            height: 50px;
+            display: flex;
+            align-items: center;
+            background-color: #fff;
+            padding: 0 30px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+        
+        .nav-tab {
+            padding: 0 20px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            color: #64748b;
+            font-size: 15px;
+            text-decoration: none;
+            position: relative;
+            transition: all 0.3s;
+        }
+        
+        .nav-tab:hover {
+            color: var(--primary-color);
+        }
+        
+        .nav-tab.active {
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+        
+        .nav-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 20px;
+            right: 20px;
+            height: 3px;
+            background-color: var(--primary-color);
+            border-radius: 3px 3px 0 0;
+        }
+        
+        /* 语言控制区 */
+        .language-controls {
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            background: #fff;
+            margin: 15px 30px 0;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+        
+        .lang-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            color: #2c3e50;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background-color: #f8fafc;
+        }
+        
+        .lang-btn:hover {
+            background-color: #f1f5f9;
+        }
+        
+        .swap-btn {
+            margin: 0 20px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background-color: #f8fafc;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .swap-btn:hover {
+            background-color: #f1f5f9;
+            color: var(--primary-color);
+        }
+        
+        .scene-selector {
+            margin-left: auto;
+            padding: 8px 16px;
+            border-radius: 8px;
+            background-color: #f8fafc;
+            color: #2c3e50;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .scene-selector:hover {
+            background-color: #f1f5f9;
+        }
+        
+        /* 翻译区域 */
+        .translation-container {
+            flex: 1;
+            padding: 0 30px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .translation-inner {
+            display: flex;
+            gap: 20px;
+            height: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .translation-box {
+            flex: 1;
+            background-color: #fff;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .box-header {
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eef2f7;
+        }
+        
+        .action-button {
+            padding: 8px 16px;
+            border: none;
+            background-color: #f8fafc;
+            color: #64748b;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+        
+        .action-button:hover {
+            background-color: #f8fafc;
+            color: var(--primary-color);
+        }
+        
+        .text-area {
+            flex: 1;
+            width: 100%;
+            padding: 20px;
+            border: none;
+            resize: none;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #2c3e50;
+            background: #fff;
+            min-height: 200px;
+            height: calc(100vh - 250px);
+        }
+        
+        .text-area::placeholder {
+            color: #94a3b8;
+        }
+        
+        .text-area:focus {
+            outline: none;
+        }
+        
+        .box-footer {
+            padding: 12px 20px;
+            border-top: 1px solid #eef2f7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .translate-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .translate-button:hover {
+            background-color: var(--primary-hover);
+        }
+        
+        .translate-button:disabled {
+            background-color: #cbd5e1;
+            cursor: not-allowed;
+        }
+        
+        .attribution {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .translation-inner {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .text-area {
+                height: 200px;
+                min-height: 150px;
+            }
+
+            .language-controls {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .scene-selector {
+                width: 100%;
+                margin-top: 10px;
+                text-align: center;
+            }
+        }
+
+
+
+        /* 提示框样式 */
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            pointer-events: none;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        /* 修复分隔线样式 */
+        .divider {
+            width: 1px;
+            background-color: #eef2f7;
+            margin: 0 10px;
+        }
+
+        /* 修复文本区域样式 */
+        .text-area {
+            flex: 1;
+            width: 100%;
+            padding: 20px;
+            border: none;
+            resize: none;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #2c3e50;
+            background: #fff;
+            min-height: 200px;
+            height: calc(100vh - 250px);
+        }
+
+        /* 修复下拉菜单样式 */
+        .dropdown-content {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 8px;
+            background-color: #fff;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            min-width: 150px;
+            z-index: 1000;
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s;
+        }
+
+        .dropdown-content.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            padding: 12px 16px;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f8fafc;
+            color: var(--primary-color);
+        }
+
+        .dropdown-item.active {
+            color: var(--primary-color);
+            background-color: #f5f2ff;
+            font-weight: 500;
+        }
+
+        /* 修复按钮状态样式 */
+        .action-button:active {
+            transform: scale(0.95);
+        }
+
+        .translate-button:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+
+        <!-- 主内容区域 -->
+        <div class="main-content">
+            <!-- 顶部导航 -->
+            <div class="nav-tabs">
+                <a href="#" class="nav-tab">🍬</a>
+                <a href="#" class="nav-tab active">AI翻译</a>
+                <a href="#" class="nav-tab">SMT-Smitty为您提供永久免费AI翻译服务</a>
+            </div>
+
+            <!-- 语言控制区 -->
+            <div class="language-controls">
+                <div class="lang-btn" id="source-lang-btn">
+                    英语 <span class="arrow">⬇️</span>
+                </div>
+                <div class="swap-btn" id="swap-lang-btn">🔁</div>
+                <div class="lang-btn" id="target-lang-btn">
+                    中文 <span class="arrow">⬇️</span>
+                </div>
+                <div class="scene-selector">
+                    通用场景 <span class="arrow"></span>
+                </div>
+            </div>
+
+            <!-- 翻译区域 -->
+            <div class="translation-container">
+                <div class="translation-inner">
+                    <!-- 左侧输入框 -->
+                    <div class="translation-box">
+                        <div class="box-header">
+                            <div></div>
+                            <button class="action-button" id="clear-btn">清空文本</button>
+                        </div>
+                        <textarea class="text-area" id="source-text" placeholder="请输入要翻译的文本"></textarea>
+                    </div>
+                    
+                    <div class="divider"></div>
+
+                    <!-- 右侧输出框 -->
+                    <div class="translation-box">
+                        <div class="box-header">
+                            <div class="right-buttons">
+                                <button class="action-button" id="copy-btn">复制</button>
+                            </div>
+                        </div>
+                        <textarea class="text-area" id="target-text" readonly placeholder="翻译结果"></textarea>
+                        <div class="box-footer">
+                            <button class="translate-button" id="translate-btn">翻译</button>
+                            <div class="attribution">以上翻译结果来自SMT自研Smitty大模型·通用场景</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="toast" class="toast"></div>
+    
+    <script src="api.js"></script>
+    <script src="init.js"></script>
+    <script src="auto-refresh.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 获取页面元素
+            const appContainer = document.querySelector('.app-container');
+            const sourceText = document.getElementById('source-text');
+            const targetText = document.getElementById('target-text');
+            const translateBtn = document.getElementById('translate-btn');
+            const clearBtn = document.getElementById('clear-btn');
+            const copyBtn = document.getElementById('copy-btn');
+            const sourceLangBtn = document.getElementById('source-lang-btn');
+            const targetLangBtn = document.getElementById('target-lang-btn');
+            const swapLangBtn = document.getElementById('swap-lang-btn');
+            const attribution = document.querySelector('.attribution');
+            const toast = document.getElementById('toast');
+
+
+            function showToast(message) {
+                toast.textContent = message;
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 2000);
+            }
+
+            // 移除了侧边栏开关相关功能
+            
+            // 语言配置
+            let sourceLang = 'en';
+            let targetLang = 'zh';
+            const langNames = {
+                'en': '英语',
+                'zh': '中文',
+            };
+
+            // 更新语言按钮文本
+            function updateLangButtonText(btn, lang) {
+                btn.innerHTML = `${langNames[lang]} <span class="arrow">▼</span>`;
+            }
+            
+            // 设置API响应回调
+            window.sparkAPI.setResponseCallback((content, type, isComplete) => {
+                if (type === 'error') {
+                    targetText.value = content;
+                } else {
+                    targetText.value = content;
+                }
+                if (type === 'error' || isComplete) {
+                    translateBtn.disabled = false;
+                    translateBtn.textContent = '翻译';
+                }
+            });
+            
+            // 清空源文本
+            clearBtn.addEventListener('click', () => {
+                sourceText.value = '';
+                sourceText.focus();
+            });
+            
+            // 修复复制功能
+            copyBtn.addEventListener('click', () => {
+                if (targetText.value) {
+                    targetText.select();
+                    try {
+                        document.execCommand('copy');
+                        showToast('复制成功');
+                    } catch (err) {
+                        showToast('复制失败，请重试');
+                    }
+                }
+            });
+            
+            // 切换源语言和目标语言
+            swapLangBtn.addEventListener('click', () => {
+                [sourceLang, targetLang] = [targetLang, sourceLang];
+                [sourceText.value, targetText.value] = [targetText.value, sourceText.value];
+                updateLangButtonText(sourceLangBtn, sourceLang);
+                updateLangButtonText(targetLangBtn, targetLang);
+            });
+            
+            // 修复语言选择功能
+            function handleLanguageSelect(btn, isSource = true) {
+                document.querySelectorAll('.dropdown-content').forEach(el => el.remove());
+                
+                const dropdown = createLanguageDropdown(isSource ? sourceLang : targetLang);
+                const rect = btn.getBoundingClientRect();
+                
+                dropdown.style.position = 'fixed';
+                dropdown.style.left = rect.left + 'px';
+                dropdown.style.top = (rect.bottom + 5) + 'px';
+                dropdown.style.minWidth = rect.width + 'px';
+                
+                document.body.appendChild(dropdown);
+                requestAnimationFrame(() => dropdown.classList.add('show'));
+                
+                function handleClick(e) {
+                    if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+                        dropdown.classList.remove('show');
+                        setTimeout(() => dropdown.remove(), 200);
+                        document.removeEventListener('click', handleClick);
+                    }
+                }
+                
+                dropdown.addEventListener('click', (e) => {
+                    const item = e.target.closest('.dropdown-item');
+                    if (!item) return;
+                    
+                    const selectedLang = item.dataset.lang;
+                    if (isSource) {
+                        if (selectedLang === targetLang) {
+                            [sourceLang, targetLang] = [targetLang, sourceLang];
+                            updateLangButtonText(targetLangBtn, targetLang);
+                        } else {
+                            sourceLang = selectedLang;
+                        }
+                    } else {
+                        if (selectedLang === sourceLang) {
+                            [sourceLang, targetLang] = [targetLang, sourceLang];
+                            updateLangButtonText(sourceLangBtn, sourceLang);
+                        } else {
+                            targetLang = selectedLang;
+                        }
+                    }
+                    updateLangButtonText(btn, isSource ? sourceLang : targetLang);
+                    dropdown.classList.remove('show');
+                    setTimeout(() => dropdown.remove(), 200);
+                    document.removeEventListener('click', handleClick);
+                });
+                
+                setTimeout(() => {
+                    document.addEventListener('click', handleClick);
+                }, 0);
+            }
+            
+            // 创建语言选择下拉菜单
+            function createLanguageDropdown(currentLang) {
+                const dropdown = document.createElement('div');
+                dropdown.className = 'dropdown-content';
+                
+                Object.entries(langNames).forEach(([code, name]) => {
+                    const item = document.createElement('div');
+                    item.className = `dropdown-item${code === currentLang ? ' active' : ''}`;
+                    item.textContent = name;
+                    item.dataset.lang = code;
+                    dropdown.appendChild(item);
+                });
+                
+                return dropdown;
+            }
+
+            // 源语言和目标语言按钮事件
+            sourceLangBtn.addEventListener('click', () => handleLanguageSelect(sourceLangBtn, true));
+            targetLangBtn.addEventListener('click', () => handleLanguageSelect(targetLangBtn, false));
+            
+            // 初始化语言按钮文本
+            updateLangButtonText(sourceLangBtn, sourceLang);
+            updateLangButtonText(targetLangBtn, targetLang);
+            
+            // 修复翻译按钮状态
+            translateBtn.addEventListener('click', async () => {
+                const text = sourceText.value.trim();
+                if (!text) {
+                    showToast('请输入要翻译的文本');
+                    return;
+                }
+                
+                translateBtn.disabled = true;
+                translateBtn.textContent = '翻译中...';
+                targetText.value = '正在翻译...';
+                
+                try {
+                    await window.sparkAPI.sendMessage(
+                        `请将以下${langNames[sourceLang]}文本翻译成${langNames[targetLang]}：\n${text}`
+                    );
+                    attribution.textContent = '以上翻译结果来自SMT自研Smitty大模型·通用场景';
+                } catch (error) {
+                    targetText.value = '翻译失败，请稍后重试';
+                    showToast('翻译失败，请稍后重试');
+                    translateBtn.disabled = false;
+                    translateBtn.textContent = '翻译';
+                }
+            });
+            
+            // 添加自动保存功能
+            let typingTimer;
+            sourceText.addEventListener('input', () => {
+                clearTimeout(typingTimer);
+                typingTimer = setTimeout(() => {
+                    localStorage.setItem('lastTranslateText', sourceText.value);
+                }, 1000);
+            });
+
+            // 恢复上次翻译内容
+            const lastText = localStorage.getItem('lastTranslateText');
+            if (lastText) {
+                sourceText.value = lastText;
+            }
+
+            // 添加快捷键支持
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        translateBtn.click();
+                    } else if (e.key === 'l') {
+                        e.preventDefault();
+                        sourceLangBtn.click();
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
