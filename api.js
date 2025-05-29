@@ -118,6 +118,14 @@ window.sparkAPI = {
     
     // 处理API响应
     handleResponse(response) {
+        if (!response || !response.header) {
+            console.error('无效的API响应');
+            if (this.responseCallback) {
+                this.responseCallback('抱歉，服务器返回了无效的响应', 'error');
+            }
+            return;
+        }
+
         if (response.header.code !== 0) {
             console.error('API错误:', response.header.message);
             if (this.responseCallback) {
@@ -127,7 +135,13 @@ window.sparkAPI = {
         }
         
         // 检查是否有文本内容
-        if (response.payload && response.payload.choices && response.payload.choices.text && response.payload.choices.text.length > 0) {
+        if (response.payload && 
+            response.payload.choices && 
+            response.payload.choices.text && 
+            response.payload.choices.text.length > 0 && 
+            response.payload.choices.text[0] && 
+            response.payload.choices.text[0].content) {
+            
             const content = response.payload.choices.text[0].content;
             
             // 将新内容添加到缓冲区
@@ -145,6 +159,11 @@ window.sparkAPI = {
             // 如果会话结束，清空缓冲区
             if (status === 2) {
                 this.messageBuffer = '';
+            }
+        } else {
+            console.error('API响应中没有有效的文本内容');
+            if (this.responseCallback) {
+                this.responseCallback('抱歉，未能获取到翻译结果', 'error');
             }
         }
     },

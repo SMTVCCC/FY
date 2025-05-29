@@ -621,6 +621,7 @@
                         <div class="box-header">
                             <div class="right-buttons">
                                 <button class="action-button" id="copy-btn">复制</button>
+                                <button class="action-button" id="speak-btn">朗读</button>
                             </div>
                         </div>
                         <textarea class="text-area" id="target-text" readonly placeholder="翻译结果"></textarea>
@@ -648,12 +649,16 @@
             const translateBtn = document.getElementById('translate-btn');
             const clearBtn = document.getElementById('clear-btn');
             const copyBtn = document.getElementById('copy-btn');
+            const speakBtn = document.getElementById('speak-btn');
             const sourceLangBtn = document.getElementById('source-lang-btn');
             const targetLangBtn = document.getElementById('target-lang-btn');
             const swapLangBtn = document.getElementById('swap-lang-btn');
             const attribution = document.querySelector('.attribution');
             const toast = document.getElementById('toast');
 
+            // 初始化语音合成
+            const synth = window.speechSynthesis;
+            let isReading = false;
 
             function showToast(message) {
                 toast.textContent = message;
@@ -827,6 +832,10 @@
                 clearTimeout(typingTimer);
                 typingTimer = setTimeout(() => {
                     localStorage.setItem('lastTranslateText', sourceText.value);
+                    // 如果文本不为空，自动触发翻译
+                    if (sourceText.value.trim() && !translateBtn.disabled) {
+                        translateBtn.click();
+                    }
                 }, 1000);
             });
 
@@ -847,6 +856,40 @@
                         sourceLangBtn.click();
                     }
                 }
+            });
+
+            // 朗读功能
+            speakBtn.addEventListener('click', () => {
+                const text = targetText.value.trim();
+                if (!text) {
+                    showToast('没有可朗读的文本');
+                    return;
+                }
+
+                if (isReading) {
+                    synth.cancel();
+                    isReading = false;
+                    speakBtn.textContent = '朗读';
+                    return;
+                }
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = targetLang === 'zh' ? 'zh-CN' : 'en-US';
+                
+                utterance.onend = () => {
+                    isReading = false;
+                    speakBtn.textContent = '朗读';
+                };
+
+                utterance.onerror = () => {
+                    isReading = false;
+                    speakBtn.textContent = '朗读';
+                    showToast('朗读出错，请重试');
+                };
+
+                isReading = true;
+                speakBtn.textContent = '停止';
+                synth.speak(utterance);
             });
         });
     </script>
