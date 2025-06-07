@@ -782,6 +782,126 @@
             margin-right: 6px;
             font-size: 16px;
         }
+
+        /* 图片翻译相关样式 */
+        .left-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .input-area {
+            position: relative;
+            flex: 1;
+        }
+
+        .image-drop-zone {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--input-bg);
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .image-drop-zone:hover {
+            border-color: var(--primary-color);
+            background: var(--hover-bg);
+        }
+
+        .image-drop-zone.dragover {
+            border-color: var(--primary-color);
+            background: var(--hover-bg);
+            transform: scale(1.02);
+        }
+
+        .drop-zone-content {
+            text-align: center;
+            color: var(--text-color);
+        }
+
+        .drop-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.6;
+        }
+
+        .drop-text {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-color);
+        }
+
+        .drop-hint {
+            font-size: 14px;
+            color: var(--text-secondary);
+            opacity: 0.7;
+        }
+
+        /* OCR 处理状态样式 */
+        .ocr-processing {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            z-index: 100;
+            display: none;
+        }
+
+        .ocr-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .ocr-text {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        /* 移动端图片翻译优化 */
+        @media (max-width: 768px) {
+            .left-buttons {
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .drop-icon {
+                font-size: 36px;
+                margin-bottom: 12px;
+            }
+
+            .drop-text {
+                font-size: 16px;
+                margin-bottom: 6px;
+            }
+
+            .drop-hint {
+                font-size: 12px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -792,7 +912,7 @@
             <!-- 顶部导航 -->
             <div class="nav-tabs">
                 <div class="nav-left">
-                    <a href="#" class="nav-tab active">AI翻译</a>
+        
                     <a href="#" class="member-btn">
                         <i>🍬</i>
                         SMT-Smitty为您提供永久免费AI翻译服务
@@ -823,10 +943,23 @@
                     <!-- 左侧输入框 -->
                     <div class="translation-box">
                         <div class="box-header">
-                            <div></div>
+                            <div class="left-buttons">
+                                <button class="action-button" id="image-upload-btn">📷 图片翻译</button>
+                            </div>
                             <button class="action-button" id="clear-btn">清空文本</button>
                         </div>
-                        <textarea class="text-area" id="source-text" placeholder="请输入要翻译的文本"></textarea>
+                        <div class="input-area">
+                            <textarea class="text-area" id="source-text" placeholder="请输入要翻译的文本，或点击上方按钮上传图片进行OCR识别（目前仅支持英文识别！）"></textarea>
+                            <div class="image-drop-zone" id="image-drop-zone" style="display: none;">
+                                <div class="drop-zone-content">
+                                    <div class="drop-icon">📷</div>
+                                    <div class="drop-text">拖拽图片到此处或点击选择图片</div>
+                                    <div class="drop-hint">支持 JPG、PNG、GIF 格式</div>
+                                </div>
+                                <input type="file" id="image-input" accept="image/*" style="display: none;">
+                            </div>
+                            <canvas id="image-canvas" style="display: none;"></canvas>
+                        </div>
                     </div>
                     
                     <div class="divider"></div>
@@ -852,9 +985,10 @@
     
     <div id="toast" class="toast"></div>
     
+    <!-- Tesseract.js OCR库 -->
+        <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="api.js"></script>
     <script src="init.js"></script>
-    <script src="auto-refresh.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // 获取页面元素
@@ -870,6 +1004,12 @@
             const swapLangBtn = document.getElementById('swap-lang-btn');
             const attribution = document.querySelector('.attribution');
             const toast = document.getElementById('toast');
+            
+            // 图片翻译相关元素
+            const imageUploadBtn = document.getElementById('image-upload-btn');
+            const imageDropZone = document.getElementById('image-drop-zone');
+            const imageInput = document.getElementById('image-input');
+            const imageCanvas = document.getElementById('image-canvas');
 
             // 初始化语音合成
             const synth = window.speechSynthesis;
@@ -1198,6 +1338,200 @@
                     synth.cancel();
                     isReading = false;
                     speakBtn.textContent = '朗读';
+                }
+            });
+            
+            // ========== 图片翻译功能 ==========
+            
+            // 创建OCR处理状态显示
+            function createOCRProcessing() {
+                const processing = document.createElement('div');
+                processing.className = 'ocr-processing';
+                processing.innerHTML = `
+                    <div class="ocr-spinner"></div>
+                    <div class="ocr-text">正在识别图片中的文字...</div>
+                `;
+                return processing;
+            }
+            
+            // 显示OCR处理状态
+            function showOCRProcessing() {
+                const processing = createOCRProcessing();
+                document.querySelector('.input-area').appendChild(processing);
+                processing.style.display = 'block';
+                return processing;
+            }
+            
+            // 隐藏OCR处理状态
+            function hideOCRProcessing(processing) {
+                if (processing && processing.parentNode) {
+                    processing.parentNode.removeChild(processing);
+                }
+            }
+            
+            // 图片上传按钮点击事件
+             imageUploadBtn.addEventListener('click', () => {
+                 if (imageDropZone.style.display === 'none') {
+                     // 显示拖拽区域
+                     imageDropZone.style.display = 'flex';
+                     sourceText.style.display = 'none';
+                 } else {
+                     // 隐藏拖拽区域，显示文本框
+                     imageDropZone.style.display = 'none';
+                     sourceText.style.display = 'block';
+                     
+                     // 清除任何残留的OCR处理状态
+                     const existingProcessing = document.querySelector('.ocr-processing');
+                     if (existingProcessing) {
+                         hideOCRProcessing(existingProcessing);
+                     }
+                 }
+             });
+            
+            // 拖拽区域点击事件
+            imageDropZone.addEventListener('click', () => {
+                imageInput.click();
+            });
+            
+            // 文件选择事件
+            imageInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    handleImageFile(file);
+                }
+            });
+            
+            // 拖拽事件处理
+            imageDropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                imageDropZone.classList.add('dragover');
+            });
+            
+            imageDropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                imageDropZone.classList.remove('dragover');
+            });
+            
+            imageDropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                imageDropZone.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const file = files[0];
+                    if (file.type.startsWith('image/')) {
+                        handleImageFile(file);
+                    } else {
+                        showToast('请选择图片文件');
+                    }
+                }
+            });
+            
+            // 处理图片文件
+            async function handleImageFile(file) {
+                try {
+                    // 显示处理状态
+                    const processing = showOCRProcessing();
+                    
+                    // 创建图片对象
+                    const img = new Image();
+                    const reader = new FileReader();
+                    
+                    reader.onload = async (e) => {
+                        img.onload = async () => {
+                            try {
+                                // 在Canvas中绘制图片
+                                const ctx = imageCanvas.getContext('2d');
+                                imageCanvas.width = img.width;
+                                imageCanvas.height = img.height;
+                                ctx.drawImage(img, 0, 0);
+                                
+                                // 使用Tesseract.js v5进行OCR识别，添加超时机制
+                                const worker = await Tesseract.createWorker(sourceLang === 'zh' ? 'chi_sim' : 'eng', 1, {
+                                    logger: m => {
+                                        if (m.status === 'recognizing text') {
+                                            const progress = Math.round(m.progress * 100);
+                                            const ocrText = processing.querySelector('.ocr-text');
+                                            if (ocrText) {
+                                                ocrText.textContent = `正在识别图片中的文字... ${progress}%`;
+                                            }
+                                        }
+                                    }
+                                });
+                                
+                                const ocrPromise = worker.recognize(imageCanvas).then(result => {
+                                    worker.terminate();
+                                    return result;
+                                });
+                                
+                                // 设置30秒超时
+                                const timeoutPromise = new Promise((_, reject) => {
+                                    setTimeout(() => reject(new Error('OCR识别超时')), 30000);
+                                });
+                                
+                                const { data: { text } } = await Promise.race([ocrPromise, timeoutPromise]);
+                                
+                                // 隐藏处理状态
+                                hideOCRProcessing(processing);
+                                
+                                if (text.trim()) {
+                                    // 将识别的文字填入输入框
+                                    sourceText.value = text.trim();
+                                    
+                                    // 隐藏拖拽区域，显示文本框
+                                    imageDropZone.style.display = 'none';
+                                    sourceText.style.display = 'block';
+                                    
+                                    showToast('图片文字识别成功！');
+                                    
+                                    // 自动开始翻译
+                                    if (text.trim().length > 0) {
+                                        translateBtn.click();
+                                    }
+                                } else {
+                                    showToast('未能识别到文字，请尝试更清晰的图片');
+                                }
+                                
+                            } catch (error) {
+                                hideOCRProcessing(processing);
+                                console.error('OCR识别错误:', error);
+                                showToast('图片识别失败，请重试');
+                            }
+                        };
+                        
+                        img.src = e.target.result;
+                    };
+                    
+                    reader.readAsDataURL(file);
+                    
+                } catch (error) {
+                    // 确保隐藏处理状态
+                    const existingProcessing = document.querySelector('.ocr-processing');
+                    if (existingProcessing) {
+                        hideOCRProcessing(existingProcessing);
+                    }
+                    console.error('图片处理错误:', error);
+                    showToast('图片处理失败，请重试');
+                }
+            }
+            
+            // 支持直接拖拽图片到文本框
+            sourceText.addEventListener('dragover', (e) => {
+                e.preventDefault();
+            });
+            
+            sourceText.addEventListener('drop', (e) => {
+                e.preventDefault();
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const file = files[0];
+                    if (file.type.startsWith('image/')) {
+                        // 显示拖拽区域并处理图片
+                        imageDropZone.style.display = 'flex';
+                        sourceText.style.display = 'none';
+                        handleImageFile(file);
+                    }
                 }
             });
         });
