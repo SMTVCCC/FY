@@ -225,7 +225,7 @@ if (!window.sparkAPI) {
                 parameter: {
                     chat: {
                         domain: this.domain,
-                        temperature: 0.1,  // 降低温度以获得更准确的翻译
+                        temperature: 0.2,  // 降低温度以获得更准确的翻译
                         max_tokens: 4096   // 增加最大token数以支持更长的文本
                     }
                 },
