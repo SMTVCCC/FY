@@ -1729,15 +1729,41 @@
                 
                 console.log('开始翻译流程...');
                 translateBtn.disabled = true;
-                translateBtn.textContent = '翻译中...';
-                targetText.value = '正在翻译...';
+                
+                // 检测是否为单个单词（单词解析系统）
+                const cleanText = text.trim().replace(/[.,!?;:"'()\[\]{}]/g, ''); // 移除标点符号
+                const isSingleWord = /^[a-zA-Z]+$/.test(cleanText) && !cleanText.includes(' ') && cleanText.length > 0;
+                
+                if (isSingleWord) {
+                    translateBtn.textContent = '解析中...';
+                    targetText.value = '正在进行单词解析...';
+                } else {
+                    translateBtn.textContent = '翻译中...';
+                    targetText.value = '正在翻译...';
+                }
                 
                 try {
-                    // 构建简洁明确的翻译请求
-                    const translationPrompt = `请翻译以下文本从${window.langNames[window.sourceLang]}翻译成${window.langNames[window.targetLang]}：\n\n${text}`;
+                    let translationPrompt;
+                    if (isSingleWord) {
+                         // 单词解析模式：提供详细解释
+                         translationPrompt = `请对单词"${cleanText}"进行详细解析，包括：
+1. 中文翻译
+2. 词性（名词/动词/形容词等）
+3. 音标发音
+4. 常用搭配或短语
+5. 例句（英文+中文翻译）
+6. 词根词缀分析（如适用）
+7. 同义词和反义词
+
+请用清晰的格式输出，便于学习理解。`;
+                        attribution.textContent = '以上解析结果来自SMT自研Smitty大模型·单词解析模式';
+                    } else {
+                        // 普通翻译模式
+                        translationPrompt = `请翻译以下文本从${window.langNames[window.sourceLang]}翻译成${window.langNames[window.targetLang]}：\n\n${text}`;
+                        attribution.textContent = '以上翻译结果来自SMT自研Smitty大模型·通用场景';
+                    }
                     
                     await window.sparkAPI.sendMessage(translationPrompt);
-                    attribution.textContent = '以上翻译结果来自SMT自研Smitty大模型·通用场景';
                 } catch (error) {
                     targetText.value = '翻译失败，请稍后重试';
                     showToast('翻译失败，请稍后重试');
@@ -1755,6 +1781,19 @@
                 
                 // 保存当前文本
                 localStorage.setItem('lastTranslateText', sourceText.value);
+                
+                // 动态更新按钮文本
+                if (currentText) {
+                    const cleanText = currentText.replace(/[.,!?;:"'()\[\]{}]/g, '');
+                    const isSingleWord = /^[a-zA-Z]+$/.test(cleanText) && !cleanText.includes(' ') && cleanText.length > 0;
+                    if (!translateBtn.disabled) {
+                        translateBtn.textContent = isSingleWord ? '单词解析' : '翻译';
+                    }
+                } else {
+                    if (!translateBtn.disabled) {
+                        translateBtn.textContent = '翻译';
+                    }
+                }
                 
                 // 如果文本为空，清空翻译结果
                 if (!currentText) {
@@ -1777,6 +1816,13 @@
             const lastText = localStorage.getItem('lastTranslateText');
             if (lastText) {
                 sourceText.value = lastText;
+                // 设置正确的按钮文本
+                const currentText = lastText.trim();
+                if (currentText) {
+                    const cleanText = currentText.replace(/[.,!?;:"'()\[\]{}]/g, '');
+                    const isSingleWord = /^[a-zA-Z]+$/.test(cleanText) && !cleanText.includes(' ') && cleanText.length > 0;
+                    translateBtn.textContent = isSingleWord ? '单词解析' : '翻译';
+                }
             }
 
             // 添加快捷键支持

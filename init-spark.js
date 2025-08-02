@@ -59,7 +59,16 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (type === 'error' || isComplete) {
                 translateBtn.disabled = false;
-                translateBtn.textContent = '翻译';
+                // 根据当前模式设置按钮文本
+                const sourceText = document.getElementById('source-text');
+                if (sourceText) {
+                    const text = sourceText.value.trim();
+                    const cleanText = text.replace(/[.,!?;:"'()\[\]{}]/g, '');
+                    const isSingleWord = /^[a-zA-Z]+$/.test(cleanText) && !cleanText.includes(' ') && cleanText.length > 0;
+                    translateBtn.textContent = isSingleWord ? '单词解析' : '翻译';
+                } else {
+                    translateBtn.textContent = '翻译';
+                }
             }
         });
         
