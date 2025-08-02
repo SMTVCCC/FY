@@ -1749,18 +1749,17 @@
                          translationPrompt = `请对单词"${cleanText}"进行详细解析，包括：
 1. 中文翻译
 2. 词性（名词/动词/形容词等）
-3. 音标发音
+3. 词根词缀分析（如适用）
 4. 常用搭配或短语
 5. 例句（英文+中文翻译）
-6. 词根词缀分析（如适用）
-7. 同义词和反义词
+6. 同义词和反义词
 
 请用清晰的格式输出，便于学习理解。`;
                         attribution.textContent = '以上解析结果来自SMT自研Smitty大模型·单词解析模式';
                     } else {
                         // 普通翻译模式
                         translationPrompt = `请翻译以下文本从${window.langNames[window.sourceLang]}翻译成${window.langNames[window.targetLang]}：\n\n${text}`;
-                        attribution.textContent = '以上翻译结果来自SMT自研Smitty大模型·通用场景';
+                        attribution.textContent = '以上翻译结果来自SMT自研Smitty翻译模型·通用场景';
                     }
                     
                     await window.sparkAPI.sendMessage(translationPrompt);
